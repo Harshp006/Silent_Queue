@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+# SilentQueue – Real-Time Queue Management System
 
-## Project info
+## Project Overview
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+SilentQueue is a **smart, real-time queue management platform** designed to save time for both users and service providers. It allows visitors to check queue status, join queues remotely, and estimate wait times. Admins can manage multiple queues effortlessly with live updates.  
 
-## How can I edit this code?
+Perfect for **offices, hospitals, canteens, banks, and service counters**, SilentQueue minimizes waiting, enhances transparency, and provides a **modern, Google-tech powered experience**.  
 
-There are several ways of editing your application.
+**Live Demo:** *(Add your hosting link here)*  
+**GitHub Repository:** https://github.com/YOUR_USERNAME/silentqueue
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Features
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Live Queue Status:** Users see real-time updates of queue length and estimated wait time.
+- **Join Queues Online:** Scan a QR code or click a link to join a queue instantly.
+- **Dynamic QR Codes:** Every queue generates a unique QR for easy access.
+- **Admin Dashboard:** Manage multiple queues, serve the next person, pause/resume queues, or delete queues.
+- **Secure Admin Login:** Admin dashboard is password-protected for security.
+- **Average Wait Time Calculation:** Helps users plan their visit more efficiently.
+- **Responsive Design:** Works on mobile and desktop seamlessly.
+- **Push Notifications (Future):** Can notify users when their turn is approaching.
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Technology Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+SilentQueue is built using **modern, hackathon-level technologies**:
 
-Follow these steps:
+- **Frontend:** React + TypeScript + Tailwind CSS  
+- **UI Components:** shadcn-ui for professional and responsive UI  
+- **Backend:** Firebase Realtime Database for real-time data sync  
+- **Hosting:** Vercel Hosting (optional, instant deployment)  
+- **QR Code Integration:** `qrcode.react` to generate dynamic QR codes  
+- **State Management:** React hooks for simplicity and performance  
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## How It Works
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. **Admin Creates a Queue:** Admin sets the counter name and average service time.  
+2. **Queue Generates a Link & QR Code:** Users can join via link or scan QR code.  
+3. **Users Join & Track Their Position:** Position updates in real-time with estimated wait.  
+4. **Admins Manage Queues:** Serve next user, pause/resume, or delete queues instantly.  
+5. **Live Updates:** All users see changes in queue status immediately thanks to Firebase.  
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+---
+
+## Getting Started Locally
+
+**Prerequisites:** Node.js & npm installed
+
+```bash
+# Step 1: Clone the repository
+git clone https://github.com/YOUR_USERNAME/silentqueue.git
+
+# Step 2: Navigate to the project folder
+
+
+# Step 3: Install dependencies
+npm install
+
+# Step 4: Start the development server
 npm run dev
-```
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+And you are done !
