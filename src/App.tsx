@@ -8,6 +8,8 @@ import QueueView from "./pages/QueueView";
 import AdminDashboard from "./pages/AdminDashboard";
 import CreateQueue from "./pages/CreateQueue";
 import NotFound from "./pages/NotFound";
+import { Navigate } from "react-router-dom";
+
 
 const queryClient = new QueryClient();
 
@@ -19,7 +21,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/queue" element={<QueueView />} />
+          <Route path="/queue" element={<Navigate to="/" replace />} />
+
           <Route path="/queue/:id" element={<QueueView />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/create" element={<CreateQueue />} />

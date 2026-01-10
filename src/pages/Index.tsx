@@ -1,7 +1,39 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
+import { ref, onValue } from "firebase/database";
+import { db } from "@/lib/firebase";
+
+interface Queue {
+  id: string;
+  name: string;
+}
 
 const Index = () => {
+  const [queues, setQueues] = useState<Queue[]>([]);
+
+  // Fetch all queues from Firebase
+  useEffect(() => {
+    const queuesRef = ref(db, "queues");
+    const unsubscribe = onValue(queuesRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const list = Object.entries(data).map(([id, val]: any) => ({
+        id,
+        name: val.name,
+      }));
+      setQueues(list);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Use first queue as default for the hero "View Queue" button
+ const latestQueueId = queues.length
+  ? queues[queues.length - 1].id
+  : null;
+
+
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -19,15 +51,34 @@ const Index = () => {
             Real-time queue status for offices, canteens, and service counters. 
             No more guessing—just scan and see.
           </p>
+          {/* Queue Selection if multiple queues exist */}
+{queues.length > 1 && (
+  <div className="mt-4 flex flex-col items-center gap-2">
+    <p className="text-sm text-muted-foreground">Select a queue to view:</p>
+    <div className="flex flex-wrap gap-2 justify-center">
+      {queues.map((queue) => (
+        <Link
+          key={queue.id}
+          to={`/queue/${queue.id}`}
+          className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors text-sm"
+        >
+          {queue.name}
+        </Link>
+      ))}
+    </div>
+  </div>
+)}
+
 
           {/* CTAs */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to="/queue"
-              className="w-full sm:w-auto px-8 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              View Queue
-            </Link>
+        <Link
+  to={queues.length === 1 ? `/queue/${queues[0].id}` : "#"}
+  className="w-full sm:w-auto px-8 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
+>
+  {queues.length === 1 ? "View Queue" : "Select a Queue Above"}
+</Link>
+
             <Link
               to="/admin"
               className="w-full sm:w-auto px-8 py-3 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors"

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
+import { ref, push, set } from "firebase/database";
+import { db } from "@/lib/firebase";
+import { QRCodeCanvas } from "qrcode.react";
+
 
 const CreateQueue = () => {
   const [counterName, setCounterName] = useState("");
@@ -8,22 +12,30 @@ const CreateQueue = () => {
   const [isCreated, setIsCreated] = useState(false);
   const [queueLink, setQueueLink] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!counterName.trim() || !avgServiceTime) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    // // API Placeholder: Create queue in Firebase
-    const mockQueueId = Math.random().toString(36).substring(7);
-    const generatedLink = `${window.location.origin}/queue/${mockQueueId}`;
-    
-    setQueueLink(generatedLink);
-    setIsCreated(true);
-  };
+  if (!counterName.trim() || !avgServiceTime) return;
+
+  const queuesRef = ref(db, "queues");
+  const newQueueRef = push(queuesRef);
+
+  await set(newQueueRef, {
+    name: counterName,
+    avgServiceTime: Number(avgServiceTime),
+    status: "active",
+    createdAt: Date.now(),
+  });
+
+  const generatedLink = `${window.location.origin}/queue/${newQueueRef.key}`;
+  setQueueLink(generatedLink);
+  setIsCreated(true);
+};
+
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(queueLink);
-    // Could add toast notification here
+    // Optional: Add toast notification
   };
 
   const handleReset = () => {
@@ -120,12 +132,14 @@ const CreateQueue = () => {
               </div>
 
               {/* QR Code placeholder */}
-              <div className="w-40 h-40 bg-secondary border-2 border-dashed border-border rounded-lg flex items-center justify-center mx-auto">
-                <span className="text-xs text-muted-foreground text-center px-4">
-                  QR Code Placeholder<br />
-                  (Integrate qrcode.js)
-                </span>
-              </div>
+              {/* QR Code */}
+<div className="w-40 h-40 bg-secondary border border-border rounded-lg flex items-center justify-center mx-auto">
+  <QRCodeCanvas
+    value={queueLink}
+    size={140}
+  />
+</div>
+
 
               {/* Link display */}
               <div className="bg-secondary rounded-lg p-3">
@@ -152,8 +166,6 @@ const CreateQueue = () => {
             </div>
           )}
         </div>
-
-        {/* // API Placeholder: Save queue to Firebase on submit */}
       </main>
     </div>
   );
