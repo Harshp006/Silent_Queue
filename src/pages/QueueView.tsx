@@ -4,10 +4,15 @@ import Header from "@/components/Header";
 import ProgressBar from "@/components/ProgressBar";
 import { ref, onValue, push } from "firebase/database";
 import { db } from "@/lib/firebase";
+import { trackEvent } from "@/lib/firebase";
+import { runTransaction } from "firebase/database";
+
+
 
 interface Member {
   id: string;
   joinedAt: number;
+  token: number;
 }
 
 interface FirebaseQueue {
@@ -15,6 +20,7 @@ interface FirebaseQueue {
   name: string;
   avgServiceTime: number;
   members: Member[];
+  status: "active" | "paused";
 }
 
 const QueueView = () => {
@@ -23,57 +29,105 @@ const QueueView = () => {
   const [queue, setQueue] = useState<FirebaseQueue | null>(null);
   const [hasJoined, setHasJoined] = useState(false);
   const [yourPosition, setYourPosition] = useState<number | null>(null);
+  const [viewTracked, setViewTracked] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+
+ const [copied, setCopied] = useState(false);
+
+const handleCopyLink = async () => {
+  await navigator.clipboard.writeText(window.location.href);
+  setCopied(true);
+  setTimeout(() => setCopied(false), 2000);
+};
+
+
 
   // -------------------------------
   // Subscribe to SINGLE queue
   // -------------------------------
   useEffect(() => {
-    if (!queueId) return
+  if (!queueId) return;
 
-    const queueRef = ref(db, `queues/${queueId}`);
+  const queueRef = ref(db, `queues/${queueId}`);
 
-    const unsub = onValue(queueRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        setQueue(null);
-        return;
-      }
+  const unsub = onValue(queueRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      setQueue(null);
+      return;
+    }
 
-      const data = snapshot.val();
+    const data = snapshot.val();
 
-      const members: Member[] = data.members
-        ? Object.entries(data.members).map(([mid, m]: any) => ({
-            id: mid,
-            joinedAt: m.joinedAt,
-          }))
-        : [];
+    const members: Member[] = data.members
+      ? Object.entries(data.members).map(([mid, m]: any) => ({
+          id: mid,
+          joinedAt: m.joinedAt,
+          token: m.token,
+        }))
+      : [];
 
-      setQueue({
-        id: queueId,
-        name: data.name,
-        avgServiceTime: data.avgServiceTime ?? 3,
-        members,
-      });
-
-      if (hasJoined) {
-        setYourPosition(members.length);
-      }
+    setQueue({
+      id: queueId,
+      name: data.name,
+      avgServiceTime: data.avgServiceTime ?? 3,
+      members,
+      status: data.status ?? "active",
     });
 
-    return () => unsub();
-  }, [queueId, hasJoined]);
+    // ✅ TRACK QUEUE VIEW (ONCE)
+    if (!viewTracked) {
+      trackEvent("queue_viewed", {
+        queue_id: queueId,
+        queue_name: data.name,
+      });
+      setViewTracked(true);
+    }
+
+    if (hasJoined) {
+      setYourPosition(members.length);
+    }
+  });
+
+  return () => unsub();
+}, [queueId, hasJoined, viewTracked]);
+
+const queueLink = window.location.href;
 
   // -------------------------------
   // Join queue
   // -------------------------------
   const handleJoinQueue = async () => {
-    if (!queueId || hasJoined) return;
+  if (!queueId || hasJoined) return;
 
-    await push(ref(db, `queues/${queueId}/members`), {
+  const queueRef = ref(db, `queues/${queueId}`);
+
+  await runTransaction(queueRef, (queueData: any) => {
+    if (!queueData) return queueData;
+
+    const lastToken = queueData.lastToken ?? 0;
+    const newToken = lastToken + 1;
+
+    if (!queueData.members) queueData.members = {};
+
+    const memberId = Date.now().toString();
+
+    queueData.members[memberId] = {
       joinedAt: Date.now(),
-    });
+      token: newToken,
+    };
 
-    setHasJoined(true);
-  };
+    queueData.lastToken = newToken;
+
+    return queueData;
+  });
+
+  trackEvent("queue_joined", {
+    queue_id: queueId,
+  });
+
+  setHasJoined(true);
+};
+
 
   // -------------------------------
   // Guard
@@ -113,11 +167,32 @@ const QueueView = () => {
 
       <main className="container-narrow py-12 sm:py-20">
         <div className="text-center mb-8">
-          <p className="text-sm font-medium text-primary mb-2">Queue Status</p>
+          <p className="text-sm font-medium text-primary mb-2">Welcome to Portal</p>
+          {/* <p className="text-sm font-medium text-primary mb-2  text-green-500">Last updated: Just Now</p> */}
           <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">
             {queue.name}
           </h1>
         </div>
+        <div className="mt-2 flex justify-center">
+  {queue.status === "active" ? (
+    <span className="px-6 py-3 rounded-full text-xm font-medium bg-green-500/10 text-green-500">
+      🟢 Queue Active
+    </span>
+  ) : (
+    <span className="px-6 py-3 rounded-full text-xm font-medium bg-yellow-500/10 text-yellow-500">
+      ⏸ Queue Paused
+    </span>
+  )}
+</div>
+
+        {hasJoined && queue.members.length > 0 && (
+  <div className="text-center mb-6">
+    <p className="text-sm text-muted-foreground">Your Token Number</p>
+    <p className="text-4xl font-bold text-primary">
+      A-{queue.members[queue.members.length - 1].token}
+    </p>
+  </div>
+)}
 
         <div className="bg-card border border-border rounded-xl p-6 sm:p-8 mb-6">
           <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-8">
@@ -138,6 +213,30 @@ const QueueView = () => {
               </p>
             </div>
           </div>
+        <div className="mt-3 p-3 border rounded bg-black-50">
+  <p className="text-xs text-blue-500 mb-1">Queue Link</p>
+
+  <div className="flex items-center gap-2">
+    <input
+      value={queueLink}
+      readOnly
+      className="flex-1 px-2 py-1 text-sm border rounded bg-white"
+    />
+
+    <button
+      onClick={handleCopyLink}
+      className="px-3 py-1 text-sm rounded bg-black text-white hover:opacity-80"
+    >
+      Copy
+    </button>
+  </div>
+
+  {copied && (
+    <p className="text-green-600 text-xs mt-1">
+      Link copied!
+    </p>
+  )}
+</div>
 
           {hasJoined && (
             <div className="mb-6">
@@ -150,13 +249,20 @@ const QueueView = () => {
               <ProgressBar progress={progress} />
             </div>
           )}
+          
+
 
           <button
             onClick={handleJoinQueue}
-            disabled={hasJoined}
+            disabled={hasJoined || queue.status === "paused"}
             className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 disabled:bg-secondary disabled:text-secondary-foreground disabled:cursor-not-allowed transition-colors"
           >
-            {hasJoined ? "You're in the queue" : "Join Queue"}
+           {hasJoined
+  ? "Already Joined"
+  : queue.status === "paused"
+  ? "Queue is Paused"
+  : "Join Queue"}
+
           </button>
         </div>
 

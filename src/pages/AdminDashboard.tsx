@@ -5,17 +5,20 @@ import QueueCard from "@/components/QueueCard";
 import { db } from "@/lib/firebase";
 import { ref, onValue, update, remove } from "firebase/database";
 import { QRCodeCanvas } from "qrcode.react";
+import { logout } from "@/lib/firebase";
 
+import { trackEvent } from "@/lib/firebase";
 
-// Type for Firebase queue
-interface FirebaseQueue {
-  id: string;
-  name: string;
-  avgServiceTime: number;
-  members: { id: string; joinedAt: number }[];
-  status: "active" | "paused" | "closed";
-}
+import {
+  auth,
+  signInWithGoogle,
+  
+  observeAuthState,
+} from "@/lib/firebase";
 
+// -------------------------------
+// Types
+// -------------------------------
 interface Queue {
   id: string;
   name: string;
@@ -28,16 +31,33 @@ const AdminDashboard = () => {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [passwordInput, setPasswordInput] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  
+
 
   // -------------------------------
-  // Subscribe to all queues in Firebase
-  // Only if authenticated
+  // Observe Google Auth State
   // -------------------------------
   useEffect(() => {
-    if (!isAuthenticated) return;
+    const unsubscribe = observeAuthState((firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // -------------------------------
+  // Subscribe to queues (ONLY after auth)
+  // -------------------------------
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
 
     const queuesRef = ref(db, "queues");
-
     const unsub = onValue(queuesRef, (snapshot) => {
       const data = snapshot.val() || {};
       const list = Object.entries(data).map(([id, val]: any) => ({
@@ -47,19 +67,33 @@ const AdminDashboard = () => {
         status: val.status,
         currentSize: val.members ? Object.keys(val.members).length : 0,
       }));
-
       setQueues(list);
     });
 
     return () => unsub();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   // -------------------------------
   // Handlers
   // -------------------------------
+  const handleLogin = async () => {
+    const adminPassword =
+      import.meta.env.VITE_ADMIN_PASSWORD || "12345";
+
+    if (!user) {
+      await signInWithGoogle();
+      return;
+    }
+
+    if (passwordInput === adminPassword) {
+      setIsAuthenticated(true);
+    } else {
+      alert("Incorrect admin password");
+    }
+  };
+
   const handleServeNext = async (id: string) => {
     const membersRef = ref(db, `queues/${id}/members`);
-
     onValue(
       membersRef,
       (snapshot) => {
@@ -85,23 +119,19 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogin = () => {
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "12345"; // fallback
-    if (passwordInput === adminPassword) {
-      setIsAuthenticated(true);
-    } else {
-      alert("Incorrect password!");
-    }
-  };
-
   // -------------------------------
   // Stats
   // -------------------------------
-  const totalPeopleWaiting = queues.reduce((sum, q) => sum + q.currentSize, 0);
-  const activeQueues = queues.filter((q) => q.status === "active").length;
+  const totalPeopleWaiting = queues.reduce(
+    (sum, q) => sum + q.currentSize,
+    0
+  );
+  const activeQueues = queues.filter(
+    (q) => q.status === "active"
+  ).length;
 
   // -------------------------------
-  // Render
+  // Login Screen (UNCHANGED UI)
   // -------------------------------
   if (!isAuthenticated) {
     return (
@@ -110,42 +140,55 @@ const AdminDashboard = () => {
           <h2 className="text-xl font-semibold text-foreground mb-4 text-center">
             Admin Login
           </h2>
+
           <input
             type="password"
-            placeholder="Enter password"
+            placeholder="Enter admin password"
             value={passwordInput}
             onChange={(e) => setPasswordInput(e.target.value)}
-            className="w-full px-4 py-2.5 bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors mb-4"
+            className="w-full px-4 py-2.5 bg-background border border-input rounded-lg mb-4"
           />
+
           <button
+          
             onClick={handleLogin}
-            className="w-full py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors"
+            className="w-full py-3 bg-primary text-primary-foreground rounded-lg"
+            
           >
-            Login
+            {user ? "Verify & Enter Dashboard" : "Sign in with Google"}
           </button>
         </div>
       </div>
     );
   }
 
+  // -------------------------------
+  // Dashboard
+  // -------------------------------
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container-wide py-8 sm:py-12">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <main className="container-wide py-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">
-              Admin Dashboard
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your queues in real-time
+            <h1 className="text-3xl font-semibold">Admin Dashboard</h1>
+            <p className="text-muted-foreground">
+              Logged in as {user?.email}
             </p>
           </div>
+          {user && (
+  <button
+    onClick={() => logout()}
+    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+  >
+    Sign Out
+  </button>
+)}
+
           <Link
             to="/create"
-            className="px-5 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors text-center"
+            className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg"
           >
             + Create Queue
           </Link>
@@ -153,83 +196,72 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">Total Queues</p>
-            <p className="text-2xl font-semibold text-foreground mt-1">{queues.length}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">Active</p>
-            <p className="text-2xl font-semibold text-foreground mt-1">{activeQueues}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">People Waiting</p>
-            <p className="text-2xl font-semibold text-foreground mt-1">{totalPeopleWaiting}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">Avg Wait</p>
-            <p className="text-2xl font-semibold text-foreground mt-1">
-              ~{queues.length
-                ? Math.round(queues.reduce((sum, q) => sum + q.avgServiceTime, 0) / queues.length)
-                : 0}{" "}
-              min
-            </p>
-          </div>
+          <Stat label="Total Queues" value={queues.length} />
+          <Stat label="Active" value={activeQueues} />
+          <Stat label="People Waiting" value={totalPeopleWaiting} />
+          <Stat
+            label="Avg Wait"
+            value={
+              queues.length
+                ? `~${Math.round(
+                    queues.reduce(
+                      (s, q) => s + q.avgServiceTime,
+                      0
+                    ) / queues.length
+                  )} min`
+                : "0 min"
+            }
+          />
         </div>
 
-       {/* Queue grid */}
-<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-  {queues.map((queue) => (
-    <div key={queue.id}>
-      <QueueCard
-        name={queue.name}
-        currentSize={queue.currentSize}
-        avgServiceTime={queue.avgServiceTime}
-        status={queue.status === "closed" ? "paused" : queue.status}
-        onServeNext={() => handleServeNext(queue.id)}
-        onTogglePause={() =>
-          handleTogglePause(
-            queue.id,
-            queue.status === "active" ? "active" : "paused"
-          )
-        }
-      />
+        {/* Queue Grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {queues.map((queue) => (
+            <div key={queue.id}>
+              <QueueCard
+                name={queue.name}
+                currentSize={queue.currentSize}
+                avgServiceTime={queue.avgServiceTime}
+                status={queue.status === "closed" ? "paused" : queue.status}
+                onServeNext={() => handleServeNext(queue.id)}
+               onTogglePause={() =>
+  handleTogglePause(
+    queue.id,
+    queue.status === "closed" ? "paused" : queue.status
+  )
+}
 
-      {/* QR CODE */}
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <QRCodeCanvas
-          value={`${window.location.origin}/queue/${queue.id}`}
-          size={130}
-        />
-        <p className="text-xs text-muted-foreground">
-          Scan to view queue
-        </p>
-      </div>
+              />
 
-      {/* DELETE BUTTON */}
-      <button
-        onClick={() => handleDeleteQueue(queue.id)}
-        className="
-          mt-3 w-full
-          flex items-center justify-center gap-2
-          px-4 py-2
-          rounded-lg
-          border border-blue-500/60
-          text-sm font-medium
-          text-blue-500
-          hover:bg-red-500 hover:text-white
-          transition-all duration-200
-        "
-      >
-        🗑 Delete Queue
-      </button>
-    </div>
-  ))}
-</div>
+              <div className="mt-4 flex flex-col items-center">
+                <QRCodeCanvas
+                  value={`${window.location.origin}/queue/${queue.id}`}
+                  size={130}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Scan to view queue
+                </p>
+              </div>
 
-
+              <button
+                onClick={() => handleDeleteQueue(queue.id)}
+                className="mt-3 w-full border border-blue-500 text-blue-500 rounded-lg py-2 hover:bg-red-500 hover:text-white"
+              >
+                🗑 Delete Queue
+              </button>
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );
 };
+
+const Stat = ({ label, value }: any) => (
+  <div className="bg-card border rounded-lg p-4">
+    <p className="text-sm text-muted-foreground">{label}</p>
+    <p className="text-2xl font-semibold">{value}</p>
+  </div>
+);
 
 export default AdminDashboard;

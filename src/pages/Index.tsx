@@ -88,7 +88,7 @@ const Index = () => {
           </div>
 
           {/* Trust line */}
-          <p className="mt-16 text-sm text-muted-foreground">
+          <p className="mt-14 text-sm text-muted-foreground">
             Trusted by colleges, hospitals, and local businesses
           </p>
         </div>
@@ -140,7 +140,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="container-wide text-center text-sm text-muted-foreground">
-          © 2025 SilentQueue. All rights reserved.
+          © 2025 SilentQueue. All rights reserved. By Harsh Patange
         </div>
       </footer>
     </div>
