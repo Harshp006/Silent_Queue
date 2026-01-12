@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { trackEvent } from "@/lib/firebase";
 import { runTransaction } from "firebase/database";
 
+import { QRCodeCanvas } from "qrcode.react";
 
 
 interface Member {
@@ -22,6 +23,9 @@ interface FirebaseQueue {
   members: Member[];
   status: "active" | "paused";
 }
+
+
+
 
 const QueueView = () => {
   const { id: queueId } = useParams<{ id: string }>();
@@ -150,6 +154,7 @@ const queueLink = window.location.href;
       </div>
     );
   }
+const queueQr = `${window.location.origin}/queue/${queueId}`;
 
 
   const totalMembers = queue.members.length;
@@ -160,6 +165,8 @@ const queueLink = window.location.href;
     hasJoined && totalMembers > 0
       ? ((totalMembers - peopleAhead) / totalMembers) * 100
       : 0;
+
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -184,6 +191,7 @@ const queueLink = window.location.href;
     </span>
   )}
 </div>
+
 
         {hasJoined && queue.members.length > 0 && (
   <div className="text-center mb-6">
@@ -215,6 +223,23 @@ const queueLink = window.location.href;
           </div>
         <div className="mt-3 p-3 border rounded bg-black-50">
   <p className="text-xs text-blue-500 mb-1">Queue Link</p>
+  <div className="flex flex-col items-center gap-4 p-4 rounded-xl border bg-card shadow-sm">
+  <p className="text-sm font-medium text-muted-foreground">
+    Want to Share the Queue? | Scan QR or Copy Link
+  </p>
+
+
+  <QRCodeCanvas
+    value={queueLink}
+    size={140}
+    bgColor="#ffffff"
+    fgColor="#000000"
+    level="H"
+  />
+
+  
+</div>
+
 
   <div className="flex items-center gap-2">
     <input
@@ -227,7 +252,7 @@ const queueLink = window.location.href;
       onClick={handleCopyLink}
       className="px-3 py-1 text-sm rounded bg-black text-white hover:opacity-80"
     >
-      Copy
+      Click to Copy
     </button>
   </div>
 

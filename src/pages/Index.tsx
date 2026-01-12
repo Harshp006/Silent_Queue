@@ -84,6 +84,7 @@ const FlowArrow = ({ className = "" }: { className?: string }) => (
 
  return (
   <div className="min-h-screen bg-background relative overflow-hidden">
+    
     {/* Background glow */}
     <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/20 blur-[120px] rounded-full" />
 
