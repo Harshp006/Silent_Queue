@@ -140,7 +140,7 @@ const AdminDashboard = () => {
           <h2 className="text-xl font-semibold text-foreground mb-4 text-center">
             Admin Login
           </h2>
-
+  <p className="text-xm text-foreground mb-4 text-center">For hackathon judges, demo credentials are provided in the submission.</p>
           <input
             type="password"
             placeholder="Enter admin password"
