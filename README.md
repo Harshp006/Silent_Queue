@@ -6,8 +6,8 @@ SilentQueue is a **smart, real-time queue management platform** designed to save
 
 Perfect for **offices, hospitals, canteens, banks, and service counters**, SilentQueue minimizes waiting, enhances transparency, and provides a **modern, Google-tech powered experience**.  
 
-**Live Demo:** *(Add your hosting link here)*  
-**GitHub Repository:** https://github.com/YOUR_USERNAME/silentqueue
+**Live Demo:** *(https://silent-queue-95d6d.web.app/)*  
+**GitHub Repository:** (https://github.com/Harshp006/Silent_Queue)
 
 ---
 
@@ -31,7 +31,7 @@ SilentQueue is built using **modern, hackathon-level technologies**:
 - **Frontend:** React + TypeScript + Tailwind CSS  
 - **UI Components:** shadcn-ui for professional and responsive UI  
 - **Backend:** Firebase Realtime Database for real-time data sync  
-- **Hosting:** Vercel Hosting (optional, instant deployment)  
+- **Hosting:** Firebase Hosting  
 - **QR Code Integration:** `qrcode.react` to generate dynamic QR codes  
 - **State Management:** React hooks for simplicity and performance  
 
